@@ -19,8 +19,7 @@ fn main() -> std::io::Result<()> {
     let reader = BufReader::new(file);  
 
     // useful vars
-    let mut id_sum: u32 = 0;
-    let mut impossible_game = false;
+    let mut power_sum: u32 = 0;
 
     // find the largest value, igorning empty strings
     for line in reader.lines() {
@@ -30,17 +29,19 @@ fn main() -> std::io::Result<()> {
 
         // remove first chunk, as it pertains to unused data
         split_str.next();
-        let mut thing_string = split_str.next().unwrap().replace(":", "");
+        let thing_string = split_str.next().unwrap().replace(":", "");
 
-        let mut game_id: u32 = thing_string.parse::<u32>().unwrap();
+        let game_id: u32 = thing_string.parse::<u32>().unwrap();
+        let mut min_red = 0;
+        let mut min_green = 0;
+        let mut min_blue = 0;
         let mut prev_digit = 0;
-        impossible_game = false;
 
         for thing in split_str {
             // determine whether it's a digit. If not, use the previous digit
-            let mut thing_string = thing.replace(",", "");
-            let mut thing_string = thing_string.replace(";", "");
-            let mut test = thing_string.parse::<u32>();
+            let thing_string = thing.replace(",", "");
+            let thing_string = thing_string.replace(";", "");
+            let test = thing_string.parse::<u32>();
 
             match test {
                 Ok(ok) => {
@@ -52,18 +53,18 @@ fn main() -> std::io::Result<()> {
 
                     match thing_string.as_ref() {
                         "red" => {
-                            if prev_digit > 12  {
-                                impossible_game = true;
+                            if prev_digit > min_red  {
+                                min_red = prev_digit;
                             }
                         },
                         "green" => {
-                            if prev_digit > 13  {
-                                impossible_game = true;
+                            if prev_digit > min_green  {
+                                min_green = prev_digit;
                             }
                         },
                         "blue" => {
-                            if prev_digit > 14  {
-                                impossible_game = true;
+                            if prev_digit > min_blue  {
+                                min_blue = prev_digit;
                             }
                         },
                         _ => {
@@ -74,18 +75,13 @@ fn main() -> std::io::Result<()> {
             }  
         }
 
-        if impossible_game {
-            println!("Game {}:  Impossible!", game_id);
-        }
-        else {
-            println!("Game {}:  Possible!", game_id);
+        println!("Game {game_id}:  r={min_red} g={min_green} b={min_blue}");
 
-            id_sum += game_id;
-        }        
+        power_sum += min_red*min_green*min_blue;
     }
 
     // print result
-    println!("{}", id_sum);
+    println!("{}", power_sum);
 
     Ok(())
 }
