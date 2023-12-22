@@ -1,23 +1,23 @@
 // To use:  `cargo run ../input.txt`
 /*
-Notes:
-This day is interesting, because you have to remember data from previous lines
-of text. 
+At first I thought that I could solve part 2 simply by replacing my
+part # search with a gear search, making the problem easier than part1.
+However, that didn't allow me to easily discover any other part nums
+adjacent to a gear.
+One benefit of this method is that it's easy to find how many parts are adjacent to a gear.
 
-Part 1 doesn't seem too bad. There are a few parts to the puzzle:
-1. Need to keep multiple lines in mem at once and go back to reference them
-later.
-2. Search through the middle line(1) in the queue [0 _1_ 2], and scan through
-iteratively. If a numeric digit character is found, record where. Then
-continue iterating until you find a non-numeric character. Record that too.
-Now you know the bounds of your number, and, by extension, the bounding box
-to search for special characters in.
-3. Write a function that 
-- takes in a 2D array of characters as well as the
-  first and last coordinates of a number in that array.
-- returns the string of data adjacent to that (a rectangle), flattened.
-- If the number is adjacent to the left or right side of the char array,
-  the missing characters are assumed to be '.'
+A better idea might be to search for more part nums once you've already found the first
+part num adjacent to a gear. In this instance, you directly copy part 1 and then ...
+
+On second thought, I'm going to retry the first method. For every gear I find (2 part #s),
+I can just iterate through the strings to complete the part #, copying my code from part 1.
+Then, if the indices of the part # fall in range to be adjacent to the gear, I add it to
+a vec. The vec results will be multiplied together and added to the sum.
+
+
+Final Solution:
+I ended up going with my instinct and reusing the int-parsing from part1. This resulted
+in a huge amount of nested logic, but it works!
 */
 
 
@@ -75,17 +75,21 @@ fn main() -> std::io::Result<()> {
 
     for line in file_lines {
         let line = line.clone();
+
+        // // fun little example, using closures and .retain()
+        // let mut thingy: Vec<&str> = line_buf[1].split(|c: char| !c.is_digit(10)).collect();
+        // thingy.retain(|&stringy| stringy.chars().count() > 0);
+        // println!("{:?}", thingy);
+
         line_buf.push_back(line.clone());
 
         // per-part# flags
-        let mut part_str;
         let mut col;
-        let mut ind1 = usize::max_value();
+        let mut ind1;
         let mut ind2;
         
         // iterate through characters until a digit is found
         col = 0;
-        part_str = String::new();
         for c in line_buf[1].chars() {
             if c == '*' {
                 if col > 0 {
@@ -102,37 +106,97 @@ fn main() -> std::io::Result<()> {
                     ind2 = col + 2;
                 }
 
-
-
                 // ======= FIND THE RECTANGLE HERE ====== //
                 let mut rect_string = String::new();
                 for line in &line_buf {
                     rect_string.push_str(&line[ind1..ind2]);
-                    rect_string.push('.');
+                    rect_string.push(',');
                 }
-                print!(" | {}", rect_string);
-
-                // // remove '.' and is_digit()
-                // let mut special_str = String::new();
-                // for c in rect_string.chars() {
-                //     if !(c.is_digit(10) || c == '.') {
-                //         special_str.push(c);
-                //     }
-                // }
-                // println!(" | {}", special_str);
-
-                // if !special_str.is_empty() {
-                //     sum += part_str.parse::<u32>().unwrap();
-                // }
+                // print!(" | {}", rect_string);
                 
-                part_str = String::new();
+
+                // === GET NUMBER OF PARTS === //
+                let mut num_parts = 0;
+                let mut part_done = true;
+                
+                // find distinct parts
+                for c in rect_string.chars() {
+                    if c.is_digit(10) {
+                        // print!("{}", c);
+        
+                        part_done = false;
+                    }
+                    else {
+                        if !part_done {
+
+                            num_parts += 1;
+                        }
+                        part_done = true;
+                    }
+                }
+                // println!("\nThis gear is adjacent to {num_parts} parts");
+
+
+                // === GET COMPLETE PART NUMBERS === //
+                let mut part_nums = Vec::new();
+                let mut part_str = String::new();
+                let mut count = 0;
+                ind1 = 0;
+
+                if num_parts == 2 {
+                    println!("{:?}", line_buf);
+
+                    for l in &line_buf {
+                        for c in l.chars() {
+                            if c.is_digit(10) {
+                                part_str.push(c);
+                                
+                                // detect if this is a new part #
+                                if part_done {
+                                    // check if num is at left-most edge
+                                    if count == 0 {
+                                        ind1 = count;
+                                    }
+                                    else {
+                                        // if not, get index just left of partnum
+                                        ind1 = count - 1;
+                                    }
+
+                                }
+                                part_done = false;
+                            }
+                            else {
+                                // finished reading part #
+                                if !part_done {
+                                    ind2 = count;
+
+                                    // check that the part is adjacent to the gear
+                                    // (indices within bounds)
+                                    if ind1 <= col && col <= ind2 {
+                                        part_nums.push(part_str.parse::<u32>().unwrap());
+                                        println!("{:?}, count={count}, ind1={ind1}, ind2={ind2}", part_nums);
+                                    }
+
+                                    part_str = String::new();
+                                    part_done = true;
+                                }
+                            }
+
+                            count += 1;
+                        }
+
+                        count = 0;
+                    }
+
+                    sum += part_nums[0] * part_nums[1];
+                }
             }
 
             col += 1;
         }
 
         // println!("{:?}", line_buf);
-        println!("\n<==>\n");
+        // println!("\n<==>\n");
         line_buf.pop_front();
     }
 
